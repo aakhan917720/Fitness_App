@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:fitness_app/login_and_sign_up/forgot.dart';
 import 'package:flutter/material.dart';
 import '../screens/home_screen.dart';
 import 'sign_up.dart';
@@ -174,16 +175,21 @@ class _LoginScreenState extends State<Login> {
                 // Forgot Password
                 Align(
                   alignment: Alignment.centerRight,
+
                   child: TextButton(
-                    onPressed: () {
-                      _showForgotPasswordDialog();
-                    },
-                    child: const Text(
-                      'Forgot Password?',
-                      style: TextStyle(color: Color(0xFF6C63FF)),
-                    ),
+                  onPressed: (){
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context)=>Forgot(),
+                      )
+                    );
+                  },
+                  child: const Text("Forgot Password?", style: TextStyle(color: Color(0xFF6C63FF)))
                   ),
                 ),
+
+
                 const SizedBox(height: 24),
 
                 // Login Button
