@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:geolocator/geolocator.dart';
 import '../modals/exercise.dart';
 import '../providers/fitness_provider.dart';
+import '../services/firestore_service.dart';
+import '../services/location_service.dart';
 
 class WorkoutScreen extends StatefulWidget {
   final Exercise exercise;
@@ -16,14 +19,30 @@ class WorkoutScreen extends StatefulWidget {
 class _WorkoutScreenState extends State<WorkoutScreen> {
   Timer? _timer;
   bool _isPaused = false;
+  Position? _currentPosition;
+  String? _locationName;
+  final FirestoreService _firestoreService = FirestoreService();
 
   @override
   void initState() {
     super.initState();
+    _getLocation();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<FitnessProvider>().startWorkout(widget.exercise);
       _startTimer();
     });
+  }
+
+  // Get user location
+  Future<void> _getLocation() async {
+    Position? position = await LocationService.getCurrentPosition();
+    if (position != null) {
+      String? address = await LocationService.getAddressFromPosition(position);
+      setState(() {
+        _currentPosition = position;
+        _locationName = address;
+      });
+    }
   }
 
   void _startTimer() {
@@ -46,6 +65,55 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
   }
 
+  // Complete workout and save to Firestore
+  void _completeWorkout() async {
+    _timer?.cancel();
+
+    final provider = context.read<FitnessProvider>();
+    final seconds = provider.currentWorkoutSeconds;
+    final calories = (widget.exercise.calories * seconds / widget.exercise.duration).round();
+
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    try {
+      // Save to Firestore with location
+      await _firestoreService.saveWorkout(
+        exerciseId: widget.exercise.id,
+        exerciseName: widget.exercise.name,
+        category: widget.exercise.category,
+        duration: seconds,
+        caloriesBurned: calories,
+        latitude: _currentPosition?.latitude,
+        longitude: _currentPosition?.longitude,
+        locationName: _locationName,
+      );
+
+      // Complete in provider
+      provider.completeWorkout();
+
+      // Hide loading
+      Navigator.pop(context);
+
+      // Show success
+      _showCompletionDialog(calories, seconds);
+    } catch (e) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error saving workout: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
@@ -64,6 +132,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
+                    // Top Bar
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -81,7 +150,34 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                         const SizedBox(width: 48),
                       ],
                     ),
-                    const SizedBox(height: 40),
+
+                    // Location Display
+                    if (_locationName != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.location_on, size: 16, color: Colors.green),
+                            const SizedBox(width: 4),
+                            Text(
+                              _locationName!,
+                              style: const TextStyle(
+                                color: Colors.green,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    const SizedBox(height: 30),
+
+                    // Timer Circle
                     Stack(
                       alignment: Alignment.center,
                       children: [
@@ -116,15 +212,19 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                       ],
                     ),
                     const SizedBox(height: 40),
+
+                    // Stats
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         _buildStatCard('Calories', '$calories', Icons.local_fire_department, Colors.orange),
                         const SizedBox(width: 20),
-                        _buildStatCard('Category', widget.exercise.category, Icons.category, Colors.blue),
+                        _buildStatCard('Location', _locationName ?? 'Getting...', Icons.location_on, Colors.green),
                       ],
                     ),
                     const SizedBox(height: 40),
+
+                    // Steps
                     const Text(
                       'Steps:',
                       style: TextStyle(
@@ -172,6 +272,8 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
+
+                    // Buttons
                     Row(
                       children: [
                         Expanded(
@@ -194,11 +296,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton.icon(
-                            onPressed: () {
-                              _timer?.cancel();
-                              provider.completeWorkout();
-                              _showCompletionDialog();
-                            },
+                            onPressed: _completeWorkout,
                             icon: const Icon(Icons.check),
                             label: const Text('Complete'),
                             style: ElevatedButton.styleFrom(
@@ -279,7 +377,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
     );
   }
 
-  void _showCompletionDialog() {
+  void _showCompletionDialog(int calories, int seconds) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -294,6 +392,16 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
               'Great job completing ${widget.exercise.name}!',
               textAlign: TextAlign.center,
             ),
+            const SizedBox(height: 12),
+            Text(
+              'Calories: $calories | Duration: ${seconds ~/ 60} min',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            if (_locationName != null)
+              Text(
+                'Location: $_locationName',
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+              ),
           ],
         ),
         actions: [

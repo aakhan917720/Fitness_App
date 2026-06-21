@@ -1,8 +1,10 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../login_and_sign_up/login.dart';
 import '../providers/fitness_provider.dart';
+import '../services/firestore_service.dart';
 import 'exercises_screen.dart';
 import 'progress_screen.dart';
 import 'bmi_screen.dart';
@@ -17,6 +19,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+  final FirestoreService _firestoreService = FirestoreService();
 
   final List<Widget> _screens = [
     const HomeContent(),
@@ -85,6 +88,7 @@ class HomeContent extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Header with Logout
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -106,11 +110,8 @@ class HomeContent extends StatelessWidget {
                               ),
                             ],
                           ),
-
-                          // LOGOUT BUTTON (CircularAvatar ki jagah)
                           GestureDetector(
                             onTap: () async {
-                              // Confirmation dialog
                               bool? confirm = await showDialog(
                                 context: context,
                                 builder: (context) => AlertDialog(
@@ -158,47 +159,65 @@ class HomeContent extends StatelessWidget {
                               ),
                             ),
                           ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
 
-                        ],
+                      // Real-time Stats from Firestore
+                      StreamBuilder<QuerySnapshot>(
+                        stream: FirestoreService().getTodayWorkouts(),
+                        builder: (context, snapshot) {
+                          int todayCalories = 0;
+                          int todayMinutes = 0;
+                          int todayWorkouts = 0;
+
+                          if (snapshot.hasData) {
+                            for (var doc in snapshot.data!.docs) {
+                              Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+                              todayCalories += (data['caloriesBurned'] ?? 0) as int;
+                              todayMinutes += ((data['duration'] ?? 0) as int) ~/ 60;
+                              todayWorkouts++;
+                            }
+                          }
+
+                          return Row(
+                            children: [
+                              Expanded(
+                                child: _buildStatCard(
+                                  'Calories',
+                                  '$todayCalories',
+                                  'kcal',
+                                  Icons.local_fire_department,
+                                  Colors.orange,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildStatCard(
+                                  'Minutes',
+                                  '$todayMinutes',
+                                  'min',
+                                  Icons.timer,
+                                  Colors.green,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildStatCard(
+                                  'Workouts',
+                                  '$todayWorkouts',
+                                  'done',
+                                  Icons.check_circle,
+                                  Colors.blue,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
                       const SizedBox(height: 24),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildStatCard(
-                              context,
-                              'Calories',
-                              '${provider.getTodayCalories()}',
-                              'kcal',
-                              Icons.local_fire_department,
-                              Colors.orange,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildStatCard(
-                              context,
-                              'Minutes',
-                              '${provider.getTodayMinutes()}',
-                              'min',
-                              Icons.timer,
-                              Colors.green,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildStatCard(
-                              context,
-                              'Workouts',
-                              '${provider.getTodayWorkouts()}',
-                              'done',
-                              Icons.check_circle,
-                              Colors.blue,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
+
+                      // Quick Start
                       Text(
                         'Quick Start',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -208,6 +227,8 @@ class HomeContent extends StatelessWidget {
                       const SizedBox(height: 12),
                       _buildQuickStartCard(context),
                       const SizedBox(height: 24),
+
+                      // Categories
                       Text(
                         'Categories',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -229,6 +250,8 @@ class HomeContent extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 24),
+
+                      // Recent Workouts from Firestore
                       Text(
                         'Recent Workouts',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -236,34 +259,61 @@ class HomeContent extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      if (provider.sessions.isEmpty)
-                        _buildEmptyState(context)
-                      else
-                        ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: provider.sessions.length > 5 ? 5 : provider.sessions.length,
-                          itemBuilder: (context, index) {
-                            final session = provider.sessions.reversed.toList()[index];
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              child: ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: const Color(0xFF6C63FF).withOpacity(0.1),
-                                  child: const Icon(Icons.fitness_center, color: Color(0xFF6C63FF)),
+                      StreamBuilder<QuerySnapshot>(
+                        stream: FirestoreService().getAllWorkouts(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return const Center(child: CircularProgressIndicator());
+                          }
+
+                          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                            return _buildEmptyState(context);
+                          }
+
+                          return ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: snapshot.data!.docs.length > 5 ? 5 : snapshot.data!.docs.length,
+                            itemBuilder: (context, index) {
+                              Map<String, dynamic> data = snapshot.data!.docs[index].data() as Map<String, dynamic>;
+                              Timestamp timestamp = data['completedAt'] ?? Timestamp.now();
+                              DateTime date = timestamp.toDate();
+
+                              return Card(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                child: ListTile(
+                                  leading: CircleAvatar(
+                                    backgroundColor: const Color(0xFF6C63FF).withOpacity(0.1),
+                                    child: const Icon(Icons.fitness_center, color: Color(0xFF6C63FF)),
+                                  ),
+                                  title: Text(data['exerciseName'] ?? 'Workout'),
+                                  subtitle: Text(
+                                    '${(data['duration'] ?? 0) ~/ 60} min • ${data['caloriesBurned'] ?? 0} kcal',
+                                  ),
+                                  trailing: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        '${date.hour}:${date.minute.toString().padLeft(2, '0')}',
+                                        style: const TextStyle(color: Colors.grey),
+                                      ),
+                                      if (data['locationName'] != null)
+                                        Text(
+                                          data['locationName'],
+                                          style: TextStyle(
+                                            color: Colors.green.shade600,
+                                            fontSize: 10,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
                                 ),
-                                title: Text(session.exerciseName),
-                                subtitle: Text(
-                                  '${session.duration ~/ 60} min • ${session.caloriesBurned} kcal',
-                                ),
-                                trailing: Text(
-                                  '${session.date.hour}:${session.date.minute.toString().padLeft(2, '0')}',
-                                  style: const TextStyle(color: Colors.grey),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
+                              );
+                            },
+                          );
+                        },
+                      ),
                     ],
                   ),
                 ),
@@ -275,7 +325,7 @@ class HomeContent extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard(BuildContext context, String title, String value, String unit, IconData icon, Color color) {
+  Widget _buildStatCard(String title, String value, String unit, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(

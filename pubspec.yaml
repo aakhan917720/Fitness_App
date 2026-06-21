@@ -10,15 +10,19 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.6
-  provider: ^6.1.1
-  shared_preferences: ^2.2.2
-  fl_chart: ^0.66.0
-  intl: ^0.19.0
-  percent_indicator: ^4.2.3
+  provider: ^6.1.5+1
+  shared_preferences: ^2.5.5
+  intl: ^0.20.2
+  percent_indicator: ^4.2.5
   firebase_core: ^4.11.0
   firebase_auth: ^6.5.3
   cloud_firestore: ^6.6.0
   google_sign_in: ^7.2.0
+  firebase_storage: ^13.4.3
+  image_picker: ^1.2.2
+  geolocator: ^14.0.3
+  geocoding: ^4.0.0
+  fl_chart: ^1.2.0
 
 dev_dependencies:
   flutter_test:

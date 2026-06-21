@@ -181,7 +181,7 @@ class _LoginScreenState extends State<Login> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context)=>Forgot(),
+                        builder: (context)=>const Forgot(),
                       )
                     );
                   },
