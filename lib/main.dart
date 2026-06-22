@@ -13,6 +13,10 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  print('Firebase initialized');
+  print('Current user: ${FirebaseAuth.instance.currentUser?.uid}');
+
   runApp(const MyApp());
 }
 

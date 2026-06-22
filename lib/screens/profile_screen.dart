@@ -50,75 +50,140 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // Pick image from gallery
+// Pick image with better handling
   Future<void> _pickImage() async {
-    final XFile? pickedFile = await _picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 80,
-    );
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 70, // Compress karo
+        maxWidth: 800,    // Max width limit
+        maxHeight: 800,   // Max height limit
+      );
 
-    if (pickedFile != null) {
+      if (pickedFile == null) {
+        // User ne cancel kiya - kuch mat karo
+        print('User cancelled image picker');
+        return;
+      }
+
       setState(() {
         _selectedImage = File(pickedFile.path);
+        _isUploading = true;
       });
+
       await _uploadImage();
+    } catch (e) {
+      setState(() => _isUploading = false);
+      print('Error picking image: $e');
     }
   }
 
-  // Upload image to Firebase Storage
+// Upload with retry logic
   Future<void> _uploadImage() async {
     if (_selectedImage == null) return;
 
-    setState(() {
-      _isUploading = true;
-    });
+    int retryCount = 0;
+    const maxRetries = 3;
 
-    try {
-      User? user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
+    while (retryCount < maxRetries) {
+      try {
+        User? user = FirebaseAuth.instance.currentUser;
+        if (user == null) throw Exception('User not logged in');
 
-      // Create unique filename
-      String fileName = 'profile_${user.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        // Check file size
+        int fileSize = await _selectedImage!.length();
+        print('File size: ${fileSize ~/ 1024} KB');
 
-      // Upload to Firebase Storage
-      Reference ref = FirebaseStorage.instance
-          .ref()
-          .child('profile_images')
-          .child(fileName);
+        if (fileSize > 5 * 1024 * 1024) { // 5MB limit
+          throw Exception('Image too large. Max 5MB allowed.');
+        }
 
-      UploadTask uploadTask = ref.putFile(_selectedImage!);
-      TaskSnapshot snapshot = await uploadTask;
+        // Delete old image if exists
+        if (_profileImageUrl != null) {
+          try {
+            Reference oldRef = FirebaseStorage.instance.refFromURL(_profileImageUrl!);
+            await oldRef.delete();
+          } catch (e) {
+            print('Old image delete error: $e');
+          }
+        }
 
-      // Get download URL
-      String downloadUrl = await snapshot.ref.getDownloadURL();
+        // Upload new image
+        String fileName = 'profile_${user.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg';
 
-      // Save URL to Firestore
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .update({'profileImageUrl': downloadUrl});
+        Reference ref = FirebaseStorage.instance
+            .ref()
+            .child('profile_images')
+            .child(user.uid)
+            .child(fileName);
 
-      setState(() {
-        _profileImageUrl = downloadUrl;
-        _isUploading = false;
-      });
+        // Upload with metadata
+        SettableMetadata metadata = SettableMetadata(
+          contentType: 'image/jpeg',
+          customMetadata: {
+            'userId': user.uid,
+            'uploadedAt': DateTime.now().toIso8601String(),
+          },
+        );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Profile picture updated!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      setState(() {
-        _isUploading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+        UploadTask uploadTask = ref.putFile(_selectedImage!, metadata);
+
+        // Listen to upload progress
+        uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
+          double progress = snapshot.bytesTransferred / snapshot.totalBytes;
+          print('Upload progress: ${(progress * 100).toStringAsFixed(1)}%');
+        });
+
+        TaskSnapshot snapshot = await uploadTask;
+        String downloadUrl = await snapshot.ref.getDownloadURL();
+
+        // Save to Firestore
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .update({'profileImageUrl': downloadUrl});
+
+        setState(() {
+          _profileImageUrl = downloadUrl;
+          _isUploading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile picture updated!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        return; // Success - exit loop
+
+      } on FirebaseException catch (e) {
+        retryCount++;
+        print('Upload attempt $retryCount failed: ${e.code} - ${e.message}');
+
+        if (retryCount >= maxRetries) {
+          setState(() => _isUploading = false);
+
+          String errorMsg = 'Upload failed';
+          if (e.code == 'cancelled') {
+            errorMsg = 'Upload cancelled. Please try again.';
+          } else if (e.code == 'unauthorized') {
+            errorMsg = 'Permission denied. Check Firebase Storage rules.';
+          } else if (e.code == 'quota_exceeded') {
+            errorMsg = 'Storage quota exceeded.';
+          }
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMsg),
+              backgroundColor: Colors.red,
+            ),
+          );
+        } else {
+          // Wait before retry
+          await Future.delayed(Duration(seconds: retryCount * 2));
+        }
+      }
     }
   }
 
