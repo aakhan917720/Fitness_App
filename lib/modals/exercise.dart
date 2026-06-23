@@ -6,7 +6,8 @@ class Exercise {
   final int duration;
   final int calories;
   final String difficulty;
-  final String imagePath;
+  final String imagePath;  // Local asset path
+  final String imageUrl;   // Network URL  ← YEH ADD KARA
   final List<String> steps;
 
   Exercise({
@@ -18,7 +19,8 @@ class Exercise {
     required this.calories,
     required this.difficulty,
     this.imagePath = '',
-    required this.steps,
+    this.imageUrl = '',     // ← YEH ADD KARA
+    required this.steps, required String modifyPath,
   });
 }
 
@@ -41,23 +43,55 @@ class WorkoutSession {
 }
 
 class UserStats {
-  double weight;
-  double height;
   int age;
   String gender;
-  double bmi;
   int totalWorkouts;
-  int totalCalories;
-  int totalMinutes;
+  double totalMinutes;   // or int, depending on your needs
+  double totalCalories;  // or int
+  // ... keep your existing fields (weight, height, etc.)
 
   UserStats({
-    this.weight = 70.0,
-    this.height = 170.0,
-    this.age = 25,
-    this.gender = 'Male',
-    this.bmi = 24.2,
+    this.age = 0,
+    this.gender = '',
     this.totalWorkouts = 0,
-    this.totalCalories = 0,
-    this.totalMinutes = 0,
+    this.totalMinutes = 0.0,
+    this.totalCalories = 0.0,
+    // ... existing parameters
   });
+
+  // If you have fromJson/toJson, add the new fields:
+  factory UserStats.fromJson(Map<String, dynamic> json) => UserStats(
+    age: json['age'] ?? 0,
+    gender: json['gender'] ?? '',
+    totalWorkouts: json['totalWorkouts'] ?? 0,
+    totalMinutes: (json['totalMinutes'] ?? 0).toDouble(),
+    totalCalories: (json['totalCalories'] ?? 0).toDouble(),
+    // ... existing fields
+  );
+
+  Map<String, dynamic> toJson() => {
+    'age': age,
+    'gender': gender,
+    'totalWorkouts': totalWorkouts,
+    'totalMinutes': totalMinutes,
+    'totalCalories': totalCalories,
+    // ... existing fields
+  };
+
+  // Add copyWith if you use it:
+  UserStats copyWith({
+    int? age,
+    String? gender,
+    int? totalWorkouts,
+    double? totalMinutes,
+    double? totalCalories,
+    // ... existing fields
+  }) => UserStats(
+    age: age ?? this.age,
+    gender: gender ?? this.gender,
+    totalWorkouts: totalWorkouts ?? this.totalWorkouts,
+    totalMinutes: totalMinutes ?? this.totalMinutes,
+    totalCalories: totalCalories ?? this.totalCalories,
+    // ... existing fields
+  );
 }

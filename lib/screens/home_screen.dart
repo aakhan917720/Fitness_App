@@ -521,7 +521,7 @@ class HomeContent extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Start your first workout today!',
+            'Start your first workou today!',
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey.shade500,

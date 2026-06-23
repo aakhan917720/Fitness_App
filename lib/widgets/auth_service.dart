@@ -28,25 +28,6 @@ class AuthService {
 
       User? user = result.user;
 
-      // if (user != null) {
-      //   // Create user model
-      //   UserModel newUser = UserModel(
-      //     uid: user.uid,
-      //     name: name,
-      //     email: email,
-      //     gender: gender,
-      //     age: age,
-      //     createdAt: DateTime.now(),
-      //   );
-      //
-      //   // Save user data to Firestore
-      //   await _firestore
-      //       .collection('users')
-      //       .doc(user.uid)
-      //       .set(newUser.toMap());
-      //
-      //   return null; // Success
-      // }
     } on FirebaseAuthException catch (e) {
       return e.message; // Return error
     }

@@ -108,17 +108,45 @@ class _ExercisesScreenState extends State<ExercisesScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ===== NETWORK IMAGE YAHAN DISPLAY HOTI HAI =====
             Container(
               height: 180,
               decoration: BoxDecoration(
-                color: const Color(0xFF6C63FF).withOpacity(0.1),
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
               ),
-              child: Center(
-                child: Icon(
-                  _getIconForCategory(exercise.category),
-                  size: 80,
-                  color: const Color(0xFF6C63FF).withOpacity(0.3),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                child: exercise.imageUrl.isNotEmpty
+                    ? Image.network(
+                  exercise.imageUrl,  // ← DIRECT URL YAHAN USE HOTA HAI
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Center(
+                      child: CircularProgressIndicator(
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                            : null,
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return Center(
+                      child: Icon(
+                        _getIconForCategory(exercise.category),
+                        size: 80,
+                        color: const Color(0xFF6C63FF).withOpacity(0.3),
+                      ),
+                    );
+                  },
+                )
+                    : Center(
+                  child: Icon(
+                    _getIconForCategory(exercise.category),
+                    size: 80,
+                    color: const Color(0xFF6C63FF).withOpacity(0.3),
+                  ),
                 ),
               ),
             ),

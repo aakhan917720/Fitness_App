@@ -8,10 +8,7 @@ class ProgressScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Progress'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Progress'), centerTitle: true),
       body: Consumer<FitnessProvider>(
         builder: (context, provider, child) {
           return SingleChildScrollView(
@@ -21,23 +18,11 @@ class ProgressScreen extends StatelessWidget {
               children: [
                 _buildOverallStats(context, provider),
                 const SizedBox(height: 24),
-                const Text(
-                  'Weekly Activity',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                const Text('Weekly Activity', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 16),
                 _buildWeeklyChart(),
                 const SizedBox(height: 24),
-                const Text(
-                  'All Time Stats',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                const Text('All Time Stats', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 16),
                 _buildAllTimeStats(context, provider),
               ],
@@ -61,33 +46,14 @@ class ProgressScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Text(
-            'Total Progress',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          const Text('Total Progress', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildProgressItem(
-                '${provider.userStats.totalWorkouts}',
-                'Workouts',
-                Icons.fitness_center,
-              ),
-              _buildProgressItem(
-                '${provider.userStats.totalCalories}',
-                'Calories',
-                Icons.local_fire_department,
-              ),
-              _buildProgressItem(
-                '${provider.userStats.totalMinutes}',
-                'Minutes',
-                Icons.timer,
-              ),
+              _buildProgressItem('${provider.userStats.totalWorkouts}', 'Workouts', Icons.fitness_center),
+              _buildProgressItem('${provider.userStats.totalCalories}', 'Calories', Icons.local_fire_department),
+              _buildProgressItem('${provider.userStats.totalMinutes}', 'Minutes', Icons.timer),
             ],
           ),
         ],
@@ -100,21 +66,8 @@ class ProgressScreen extends StatelessWidget {
       children: [
         Icon(icon, color: Colors.white70, size: 28),
         const SizedBox(height: 8),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 12,
-          ),
-        ),
+        Text(value, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
       ],
     );
   }
@@ -123,10 +76,7 @@ class ProgressScreen extends StatelessWidget {
     return Container(
       height: 200,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(16),
-      ),
+      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(16)),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -150,19 +100,10 @@ class ProgressScreen extends StatelessWidget {
         Container(
           width: 30,
           height: 150 * height,
-          decoration: BoxDecoration(
-            color: const Color(0xFF6C63FF),
-            borderRadius: BorderRadius.circular(8),
-          ),
+          decoration: BoxDecoration(color: const Color(0xFF6C63FF), borderRadius: BorderRadius.circular(8)),
         ),
         const SizedBox(height: 8),
-        Text(
-          day,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey.shade600,
-          ),
-        ),
+        Text(day, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
       ],
     );
   }
@@ -170,33 +111,13 @@ class ProgressScreen extends StatelessWidget {
   Widget _buildAllTimeStats(BuildContext context, FitnessProvider provider) {
     return Column(
       children: [
-        _buildStatTile(
-          'Current Weight',
-          '${provider.userStats.weight} kg',
-          Icons.monitor_weight,
-          Colors.blue,
-        ),
+        _buildStatTile('Current Weight', '${provider.userStats.weight} kg', Icons.monitor_weight, Colors.blue),
         const SizedBox(height: 12),
-        _buildStatTile(
-          'Height',
-          '${provider.userStats.height} cm',
-          Icons.height,
-          Colors.green,
-        ),
+        _buildStatTile('Height', '${provider.userStats.height} cm', Icons.height, Colors.green),
         const SizedBox(height: 12),
-        _buildStatTile(
-          'BMI',
-          provider.userStats.bmi.toStringAsFixed(1),
-          Icons.calculate,
-          _getBMIColor(provider.userStats.bmi),
-        ),
+        _buildStatTile('BMI', provider.userStats.bmi.toStringAsFixed(1), Icons.calculate, _getBMIColor(provider.userStats.bmi)),
         const SizedBox(height: 12),
-        _buildStatTile(
-          'Age',
-          '${provider.userStats.age} years',
-          Icons.cake,
-          Colors.purple,
-        ),
+        _buildStatTile('Age', '${provider.userStats.age} years', Icons.cake, Colors.purple),
       ],
     );
   }
@@ -204,18 +125,12 @@ class ProgressScreen extends StatelessWidget {
   Widget _buildStatTile(String title, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-      ),
+      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(16)),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
+            decoration: BoxDecoration(color: color.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
             child: Icon(icon, color: color),
           ),
           const SizedBox(width: 16),
@@ -223,21 +138,9 @@ class ProgressScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
+                Text(title, style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
                 const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ],
             ),
           ),
